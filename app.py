@@ -85,24 +85,170 @@ model, SYMPTOMS, label_encoder = load_pipeline()
 
 # synonym mapping to normalize user words to vocab items
 SYNONYMS = {
-    "fever": ["fever", "temperature", "high temperature"],
-    "cough": ["cough", "coughing"],
-    "sore_throat": ["sore throat", "throat pain", "throat hurts"],
-    "fatigue": ["tired", "fatigue", "exhausted"],
-    "headache": ["headache", "head pain", "migraine"],
-    "nausea": ["nausea", "nauseous", "queasy"],
-    "vomiting": ["vomit", "vomiting", "throw up"],
-    "diarrhea": ["diarrhea", "loose stool", "runny stool"],
-    "runny_nose": ["runny nose", "sneeze", "sneezing"],
-    "body_ache": ["body ache", "body aches", "muscle pain", "myalgia"],
-    "shortness_of_breath": [
-        "shortness of breath",
-        "breathless",
-        "difficulty breathing",
+    "fever": [
+        "fever", "temperature", "high temperature", "hot", "feverish"
     ],
-    "loss_of_smell": ["loss of smell", "can't smell", "no smell", "anosmia"],
-    "chest_pain": ["chest pain", "pain in chest"],
-    "rash": ["rash", "skin rash", "spots on skin"]
+    "chills": [
+        "chills", "feeling cold", "shivering", "rigors", "cold sweats"
+    ],
+    "cough": [
+        "cough", "coughing", "dry cough", "wet cough", "hacking"
+    ],
+    "sore_throat": [
+        "sore throat", "throat pain", "throat hurts",
+        "painful throat", "throat irritation"
+    ],
+    "fatigue": [
+        "tired", "fatigue", "exhausted", "no energy", "weakness",
+        "lethargic", "exhaustion", "tired all the time"
+    ],
+    "headache": [
+        "headache", "head pain", "head hurts", "head pounding",
+        "migraine", "head throbbing"
+    ],
+    "nausea": [
+        "nausea", "nauseous", "queasy", "sick to stomach", "feel sick",
+        "want to throw up"
+    ],
+    "vomiting": [
+        "vomit", "vomiting", "throw up", "throwing up", "getting sick",
+        "being sick"
+    ],
+    "diarrhea": [
+        "diarrhea", "loose stool", "runny stool", "watery stool",
+        "frequent bowel movements"
+    ],
+    "runny_nose": [
+        "runny nose", "drippy nose", "nasal discharge", "nose running"
+    ],
+    "congestion": [
+        "congestion", "stuffy nose", "blocked nose",
+        "nasal congestion", "sinus congestion", "stuffed up"
+    ],
+    "body_ache": [
+        "body ache", "body aches", "aching", "body pain", "general pain",
+        "everything hurts"
+    ],
+    "muscle_pain": [
+        "muscle pain", "muscular pain", "sore muscles",
+        "muscle aches", "myalgia", "muscles hurt"
+    ],
+    "muscle_weakness": [
+        "muscle weakness", "weak muscles", "loss of strength",
+        "muscles feel weak", "decreased strength"
+    ],
+    "joint_pain": [
+        "joint pain", "painful joints", "arthralgia", "joints hurt",
+        "joint aches", "sore joints"
+    ],
+    "joint_swelling": [
+        "joint swelling", "swollen joints", "puffy joints",
+        "inflamed joints"
+    ],
+    "shortness_of_breath": [
+        "shortness of breath", "breathless", "difficulty breathing",
+        "hard to breathe", "dyspnea", "can't catch breath"
+    ],
+    "wheezing": [
+        "wheezing", "wheeze", "whistling breath", "noisy breathing",
+        "breath sounds"
+    ],
+    "loss_of_smell": [
+        "loss of smell", "can't smell", "no smell", "anosmia",
+        "reduced smell", "decreased smell"
+    ],
+    "loss_of_taste": [
+        "loss of taste", "can't taste", "no taste",
+        "food tasteless", "ageusia", "decreased taste"
+    ],
+    "chest_pain": [
+        "chest pain", "pain in chest", "chest tightness",
+        "chest pressure", "chest discomfort"
+    ],
+    "facial_pain": [
+        "facial pain", "face pain", "face ache",
+        "pain in face", "facial discomfort"
+    ],
+    "vision_problems": [
+        "vision problems", "blurry vision", "trouble seeing",
+        "visual disturbance", "sight issues"
+    ],
+    "eye_irritation": [
+        "eye irritation", "itchy eyes", "watery eyes",
+        "red eyes", "eye redness", "burning eyes"
+    ],
+    "dizziness": [
+        "dizziness", "dizzy", "lightheaded", "vertigo", "unsteady",
+        "room spinning"
+    ],
+    "confusion": [
+        "confusion", "confused", "disoriented", "mental fog",
+        "brain fog", "can't think clearly"
+    ],
+    "depression": [
+        "depression", "feeling down", "depressed", "hopeless",
+        "no interest", "sadness"
+    ],
+    "anxiety": [
+        "anxiety", "anxious", "worried", "nervous", "panic",
+        "stress", "on edge"
+    ],
+    "sleep_problems": [
+        "sleep problems", "can't sleep", "insomnia", "trouble sleeping",
+        "poor sleep", "restless sleep"
+    ],
+    "increased_thirst": [
+        "increased thirst", "very thirsty", "excessive thirst",
+        "drinking lots of water", "polydipsia"
+    ],
+    "frequent_urination": [
+        "frequent urination", "peeing a lot", "urinating often",
+        "polyuria", "bathroom frequently"
+    ],
+    "abdominal_pain": [
+        "abdominal pain", "stomach pain", "tummy pain",
+        "belly pain", "stomach ache", "gut pain"
+    ],
+    "bloating": [
+        "bloating", "bloated", "swollen abdomen", "distended stomach",
+        "stomach swelling"
+    ],
+    "constipation": [
+        "constipation", "can't poop", "hard stools",
+        "difficulty passing stool", "irregular bowel movements"
+    ],
+    "loss_of_appetite": [
+        "loss of appetite", "no appetite", "don't want to eat",
+        "reduced appetite", "poor appetite", "not hungry"
+    ],
+    "weight_loss": [
+        "weight loss", "losing weight", "dropped weight",
+        "unexplained weight loss", "getting thinner"
+    ],
+    "weight_gain": [
+        "weight gain", "gaining weight", "unexplained weight gain",
+        "getting heavier"
+    ],
+    "night_sweats": [
+        "night sweats", "sweating at night", "nocturnal sweating",
+        "waking up sweating"
+    ],
+    "slow_healing": [
+        "slow healing", "wounds heal slowly", "cuts take long to heal",
+        "poor wound healing"
+    ],
+    "blurred_vision": [
+        "blurred vision", "blurry vision", "fuzzy vision",
+        "can't see clearly"
+    ],
+    "muscle_tension": [
+        "muscle tension", "tense muscles", "tight muscles",
+        "muscle stiffness"
+    ],
+    "cold_intolerance": [
+        "cold intolerance", "always cold", "sensitive to cold",
+        "can't get warm"
+    ]
 }
 
 # Build reverse lookup to map token -> symptom_key
