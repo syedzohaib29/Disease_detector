@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.env
+.env.*
+
+# Pytest cache
+.pytest_cache/
+
+# Ruff/black cache
+.ruff_cache/
+
+# Streamlit
+.streamlit/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Model artifacts
+*.pkl
+*.joblib
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
