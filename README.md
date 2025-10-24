@@ -5,15 +5,22 @@ classifier, and run inference using a single bundle artifact.
 
 Files
 - `create_dataset.py` — writes `symptoms_diseases.csv` with sample diseases and symptom flags.
-- `train_model.py` — trains a classifier and saves a single bundle file: `model_bundle.pkl` (contains
-	the sklearn Pipeline, the symptom vocabulary/column order, and the LabelEncoder). A `pipeline.pkl`
-	may also be written for convenience, but the canonical artifact is `model_bundle.pkl`.
+- `train_model.py` — trains a classifier and saves a single canonical bundle file: `model_bundle.pkl`.
+	The bundle contains the sklearn Pipeline which records the feature/column order and performs label
+	encoding so no separate label encoder or vocab file is required.
 
 Quick start (Windows PowerShell)
 
 ```powershell
 python .\create_dataset.py
 python .\train_model.py --bundle model_bundle.pkl
+```
+
+Run demo (Streamlit)
+
+```powershell
+# Ensure `model_bundle.pkl` exists (created by training or provided in the repo)
+streamlit run .\app.py
 ```
 
 Run tests (requires pytest)
