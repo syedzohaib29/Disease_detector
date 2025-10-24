@@ -1,46 +1,102 @@
-# SymptomChatbot (mini)
+# Disease Detector
 
-This small project contains scripts to generate a toy symptoms/diseases CSV, train a RandomForest
-classifier, and run inference using a single bundle artifact.
+An AI-powered disease prediction system that uses natural language processing to understand symptoms and predict possible conditions. The system is trained on a comprehensive medical dataset and achieves 93.5% accuracy in disease classification.
 
-Files
-- `create_dataset.py` — writes `symptoms_diseases.csv` with sample diseases and symptom flags.
-- `train_model.py` — trains a classifier and saves a single canonical bundle file: `model_bundle.pkl`.
-	The bundle contains the sklearn Pipeline which records the feature/column order and performs label
-	encoding so no separate label encoder or vocab file is required.
+## Features
 
-Quick start (Windows PowerShell)
+- 20 professionally relevant diseases including:
+  - Respiratory: COVID-19, Pneumonia, Tuberculosis, Bronchial Asthma
+  - Cardiovascular: Hypertension
+  - Neurological: Multiple Sclerosis, Migraine
+  - Digestive: GERD, Celiac Disease, IBS, Peptic Ulcer
+  - Endocrine: Type 2 Diabetes, Hypothyroidism
+  - Mental Health: Major Depression, Generalized Anxiety
+  - Autoimmune: Rheumatoid Arthritis
+  - Others: Common Cold, Influenza, Chronic Sinusitis, Seasonal Allergies
 
-```powershell
-python .\create_dataset.py
-python .\train_model.py --bundle model_bundle.pkl
-```
+- 44 comprehensive symptoms with medical terminology support
+- Natural language symptom description
+- Professional dataset based on Disease-Symptom Knowledge Database
+- Interactive web interface built with Streamlit
+- Probability-based predictions with top 5 suggestions
+- Medical disclaimer and professional advice recommendation
 
-Run demo (Streamlit)
+## Quick Start
 
-```powershell
-# Ensure `model_bundle.pkl` exists (created by training or provided in the repo)
-streamlit run .\app.py
-```
-
-Run tests (requires pytest)
-
-```powershell
+1. Install dependencies:
+```bash
 pip install -r requirements.txt
+```
+
+2. Generate the dataset and train the model:
+```bash
+python diseases_symptoms_mapping.py  # Creates comprehensive dataset
+python train_model.py               # Trains model and saves bundle
+```
+
+3. Run the web interface:
+```bash
+streamlit run app.py
+```
+
+## Usage
+
+The app provides two ways to input symptoms:
+1. Natural language description (e.g., "I have fever, headache, and I'm very tired")
+2. Checkbox selection for precise symptom selection
+
+## Model Performance
+
+- Accuracy: 93.5%
+- Balanced precision and recall across all conditions
+- Comprehensive validation using stratified cross-validation
+- Regular updates based on medical knowledge
+
+## Technical Details
+
+- **Data Processing**: Custom transformers for feature ordering and label encoding
+- **Model**: RandomForest classifier with optimized hyperparameters
+- **Pipeline**: Sklearn Pipeline with integrated label encoding
+- **Testing**: Comprehensive test suite with integration tests
+- **Deployment**: Streamlit Cloud deployment with automatic updates
+
+## Project Structure
+
+- `app.py` - Streamlit web interface
+- `diseases_symptoms_mapping.py` - Professional dataset generation
+- `train_model.py` - Model training and validation
+- `predict.py` - Command-line prediction interface
+- `tests/` - Test suite with integration tests
+- `model_bundle.pkl` - Single canonical model artifact
+
+## Development
+
+Run tests:
+```bash
 pytest -q
 ```
 
-Predict usage (bundle-first)
-
-```powershell
-# Use the single bundle file created by training
-python .\predict.py --bundle model_bundle.pkl --symptoms 1,0,0,1
+Command-line prediction:
+```bash
+python predict.py --bundle model_bundle.pkl --symptoms fever,fatigue,cough
 ```
 
-Notes
-- The project now uses a bundle-first workflow: prefer loading `model_bundle.pkl` which contains
-	everything needed for inference. Legacy multi-file CLI usage (separate model/vocab/label-enc)
-	has been removed to simplify deployment.
+## Deployment
 
-If you'd like CI or automatic formatting (black/ruff) added, tell me and I can add a GitHub Actions
-workflow and apply formatting across the repo.
+The app is deployed on Streamlit Community Cloud and automatically updates when changes are pushed to the master branch.
+
+Visit: [Disease Detector App](https://share.streamlit.io/syedzohaib29/Disease_detector)
+
+## Medical Disclaimer
+
+This application is for educational and demonstration purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
+
+## License
+
+MIT License - Feel free to use and modify for your own projects.
+
+## Credits
+
+- Disease-Symptom Knowledge Database (Columbia University)
+- Medical symptomatology research
+- Clinical practice guidelines
