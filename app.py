@@ -5,6 +5,7 @@ import re
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
 from sklearn.preprocessing import LabelEncoder
+from diseases_symptoms_mapping import DISEASE_SYMPTOMS
 
 BUNDLE_FILE = "model_bundle.pkl"
 
@@ -289,6 +290,82 @@ def symptoms_to_vector(found_symptoms, vocab):
     return np.array(vect).reshape(1, -1)
 
 
+# --- Conversational reply helpers -------------------------------------------------
+# Short advice snippets for common diseases (used to generate an AI-like reply).
+DISEASE_ADVICE = {
+    "COVID-19": "Possible COVID-19. Self-isolate, test if available, monitor breathing. Seek care if shortness of breath or persistent chest pain.",
+    "Influenza (Flu)": "Flu-like illness. Rest, hydration, antipyretics for fever. See a clinician if high fever, difficulty breathing, or worsening symptoms.",
+    "Common Cold": "Sounds like a common cold. Rest, fluids, and symptomatic care (decongestants, saline). If symptoms worsen or persist beyond ~10 days see a doctor.",
+    "Pneumonia": "Pneumonia is possible — this can be serious. See a healthcare provider promptly for evaluation and possible chest X-ray and antibiotics.",
+    "Bronchial Asthma": "Asthma symptoms (wheezing/shortness of breath). Use your inhaler as prescribed and seek urgent care if you can't speak in full sentences or rescue inhaler doesn't help.",
+    "Gastroenteritis": "Gastrointestinal infection. Stay hydrated, replace electrolytes, and seek care if you have severe dehydration, bloody diarrhea, or high fever.",
+    # generic fallback advice will be used for other diseases
+}
+
+# Red-flag symptoms that should trigger urgent care advice
+RED_FLAGS = {"chest_pain", "shortness_of_breath", "confusion", "severe_bleeding"}
+
+
+def generate_reply(user_text: str, found_symptoms: set, probs: np.ndarray, top_idx: np.ndarray, le) -> str:
+    """Generate a conversational reply given user text, detected symptoms and model probs.
+
+    This is a deterministic, template-based assistant that summarizes findings,
+    gives likely diagnoses and recommended next steps. It does not replace a
+    clinician.
+    """
+    # Empathetic opening
+    lines = []
+    lines.append("Thanks — I understand. Here's what I found based on your description:\n")
+
+    if not found_symptoms:
+        lines.append("I couldn't detect clear symptoms from your message. Could you describe what you're feeling (e.g., 'I have a fever and cough')?")
+        return "\n\n".join(lines)
+
+    # List detected symptoms
+    pretty = [s.replace("_", " ") for s in sorted(found_symptoms)]
+    lines.append("Detected symptoms: **" + ", ".join(pretty) + "**\n")
+
+    # Check for urgent flags
+    if any(f in found_symptoms for f in RED_FLAGS):
+        lines.append("\nImportant: I noticed symptoms that may require urgent medical attention (e.g., chest pain, trouble breathing, confusion). Please seek emergency care or call your local emergency number immediately.\n")
+
+    # Summarize top predictions with short advice
+    lines.append("Top suggestions:")
+    for i, idx in enumerate(top_idx):
+        label = le.inverse_transform([idx])[0]
+        p = probs[idx]
+        advice = DISEASE_ADVICE.get(label, None)
+        if advice is None:
+            # build a short generic advice
+            advice = "Consider seeing a clinician if symptoms are severe or persist. Manage symptoms at home (rest, fluids) and seek care for red flags."
+        lines.append(f"{i+1}. **{label}** — probability {p:.2f}\n   {advice}")
+
+    # Explanation: map which of the detected symptoms are typical for the top disease
+    lines.append("\nWhy these suggestions?")
+    for idx in top_idx[:3]:
+        label = le.inverse_transform([idx])[0]
+        # lookup typical symptoms if available
+        typical = []
+        try:
+            entry = DISEASE_SYMPTOMS.get(label) or DISEASE_SYMPTOMS.get(label.replace(" (Flu)", "Influenza"))
+            if entry:
+                for sev in ("common", "occasional", "rare"):
+                    typical.extend(entry.get(sev, []))
+        except Exception:
+            typical = []
+
+        matched = sorted(set(typical).intersection(found_symptoms))
+        if matched:
+            lines.append(f"- **{label}**: matched symptoms -> {', '.join(matched)}")
+        else:
+            lines.append(f"- **{label}**: matched symptoms -> none obvious from your description")
+
+    lines.append("\nIf you'd like, tell me more (when did symptoms start, how severe, any chronic conditions) and I can refine these suggestions.")
+    return "\n\n".join(lines)
+
+# -------------------------------------------------------------------------------
+
+
 # Streamlit UI
 
 st.title("Symptom-based Disease Prediction (Demo)")
@@ -344,9 +421,16 @@ if submitted:
         st.subheader("Predictions (top suggestions)")
         for i, idx in enumerate(top_idx):
             label = le.inverse_transform([idx])[0]
-            st.write(
-                f"{i+1}. **{label}** — probability {probs[idx]:.2f}"
-            )
+            st.write(f"{i+1}. **{label}** — probability {probs[idx]:.2f}")
+
+        # Generate a conversational reply (assistant-style)
+        try:
+            reply = generate_reply(user_input, found, probs, top_idx, le)
+            st.markdown("## Assistant Reply")
+            st.markdown(reply)
+        except Exception as exc:
+            # fallback: if reply generation fails, show simple predictions only
+            st.error("Failed to generate assistant reply.")
 
         st.markdown("---")
         st.markdown(
