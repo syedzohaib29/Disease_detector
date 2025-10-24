@@ -1,0 +1,212 @@
+# app.py
+import streamlit as st
+import pickle
+import re
+import numpy as np
+from sklearn.base import BaseEstimator, TransformerMixin, ClassifierMixin
+from sklearn.preprocessing import LabelEncoder
+
+BUNDLE_FILE = "model_bundle.pkl"
+
+# Configure Streamlit page
+st.set_page_config(
+    page_title="Symptom → Disease Chatbot",
+    layout="centered",
+)
+
+
+class FeatureOrderTransformer(BaseEstimator, TransformerMixin):
+    """Transformer that records the feature (column) order from a DataFrame and
+    converts incoming DataFrames to numpy arrays in that order.
+    """
+    def fit(self, X, y=None):
+        if hasattr(X, "columns"):
+            self.feature_names_ = list(X.columns)
+        else:
+            self.feature_names_ = []
+        return self
+
+    def transform(self, X):
+        if hasattr(X, "loc") and getattr(self, "feature_names_", None):
+            return X[self.feature_names_].values
+        return X
+
+
+class LabelEncodedClassifier(BaseEstimator, ClassifierMixin):
+    """Wrap a classifier and a LabelEncoder so the estimator fits on raw labels
+    and predicts decoded labels.
+    """
+    def __init__(self, base_clf=None):
+        self.base_clf = base_clf
+
+    def fit(self, X, y):
+        self.le_ = LabelEncoder()
+        y_enc = self.le_.fit_transform(y)
+        self.base_clf.fit(X, y_enc)
+        return self
+
+    def predict(self, X):
+        y_enc = self.base_clf.predict(X)
+        return self.le_.inverse_transform(y_enc)
+
+    def predict_proba(self, X):
+        return self.base_clf.predict_proba(X)
+
+
+@st.cache_data
+def load_pipeline():
+    """Load the canonical pipeline bundle. Backwards-compatible with older
+    bundle objects that wrapped the pipeline as `.pipeline`.
+    """
+    with open(BUNDLE_FILE, "rb") as f:
+        obj = pickle.load(f)
+
+    if hasattr(obj, "pipeline"):
+        pipeline = obj.pipeline
+    else:
+        pipeline = obj
+
+    # Extract vocab/feature names from the 'order' transformer if present
+    try:
+        vocab = pipeline.named_steps["order"].feature_names_
+    except Exception:
+        vocab = None
+
+    # Extract label encoder from classifier (LabelEncodedClassifier stores le_)
+    try:
+        le = pipeline.named_steps["clf"].le_
+    except Exception:
+        le = None
+
+    return pipeline, vocab, le
+
+
+model, SYMPTOMS, label_encoder = load_pipeline()
+
+# synonym mapping to normalize user words to vocab items
+SYNONYMS = {
+    "fever": ["fever", "temperature", "high temperature"],
+    "cough": ["cough", "coughing"],
+    "sore_throat": ["sore throat", "throat pain", "throat hurts"],
+    "fatigue": ["tired", "fatigue", "exhausted"],
+    "headache": ["headache", "head pain", "migraine"],
+    "nausea": ["nausea", "nauseous", "queasy"],
+    "vomiting": ["vomit", "vomiting", "throw up"],
+    "diarrhea": ["diarrhea", "loose stool", "runny stool"],
+    "runny_nose": ["runny nose", "sneeze", "sneezing"],
+    "body_ache": ["body ache", "body aches", "muscle pain", "myalgia"],
+    "shortness_of_breath": [
+        "shortness of breath",
+        "breathless",
+        "difficulty breathing",
+    ],
+    "loss_of_smell": ["loss of smell", "can't smell", "no smell", "anosmia"],
+    "chest_pain": ["chest pain", "pain in chest"],
+    "rash": ["rash", "skin rash", "spots on skin"]
+}
+
+# Build reverse lookup to map token -> symptom_key
+TOKEN_TO_SYMPTOM = {}
+for key, synonyms in SYNONYMS.items():
+    for s in synonyms:
+        TOKEN_TO_SYMPTOM[s] = key
+
+
+def extract_symptoms(text):
+    """
+    Very simple symptom extractor: lowercases text and searches for synonyms.
+    Returns a set of symptom keys that match.
+    """
+    text = text.lower()
+    found = set()
+    # Check multi-word synonyms first
+    sorted_syns = sorted(TOKEN_TO_SYMPTOM.keys(), key=lambda x: -len(x))
+    for syn in sorted_syns:
+        if syn in text:
+            found.add(TOKEN_TO_SYMPTOM[syn])
+            # remove matched part to avoid double-matching
+            text = text.replace(syn, " ")
+    # fallback: split into words and match single tokens
+    words = re.findall(r"[a-zA-Z']+", text)
+    for w in words:
+        if w in TOKEN_TO_SYMPTOM:
+            found.add(TOKEN_TO_SYMPTOM[w])
+    return found
+
+
+def symptoms_to_vector(found_symptoms, vocab):
+    """Return a feature vector in same column order as vocab.
+
+    Returns a numpy array shaped (1, n_features).
+    """
+    vect = [1 if s in found_symptoms else 0 for s in vocab]
+    return np.array(vect).reshape(1, -1)
+
+
+# Streamlit UI
+
+st.title("Symptom-based Disease Prediction (Demo)")
+
+st.markdown(
+    "Type your symptoms (plain text). Example: *I have fever and sore throat,"
+    " and I'm very tired.*",
+)
+
+with st.form("symptom_form"):
+    user_input = st.text_area(
+        "Describe your symptoms:",
+        height=120,
+        placeholder="e.g., fever, cough, tiredness...",
+    )
+
+    include_checkboxes = st.checkbox(
+        "Or select symptoms manually",
+        value=False,
+    )
+    manual = {}
+    if include_checkboxes:
+        cols = st.columns(2)
+        for i, s in enumerate(SYMPTOMS):
+            col = cols[i % 2]
+            manual[s] = col.checkbox(s.replace("_", " ").capitalize())
+    submitted = st.form_submit_button("Predict")
+
+if submitted:
+    found = extract_symptoms(user_input) if user_input.strip() else set()
+    # add manual selections
+    if include_checkboxes:
+        for s, val in manual.items():
+            if val:
+                found.add(s)
+
+    if not found:
+        st.warning(
+            "No symptom matched. Try different wording or"
+            " select symptoms manually."
+        )
+    else:
+        pretty = [s.replace("_", " ") for s in sorted(found)]
+        st.info(f"Detected symptoms: {', '.join(pretty)}")
+
+        x = symptoms_to_vector(found, SYMPTOMS)
+        probs = model.predict_proba(x)[0]
+        top_idx = np.argsort(probs)[::-1][:5]
+
+        # Label encoder lives inside the pipeline's classifier
+        # and stores classes_ in label_encoder.classes_
+        le = label_encoder
+        st.subheader("Predictions (top suggestions)")
+        for i, idx in enumerate(top_idx):
+            label = le.inverse_transform([idx])[0]
+            st.write(
+                f"{i+1}. **{label}** — probability {probs[idx]:.2f}"
+            )
+
+        st.markdown("---")
+        st.markdown(
+            "**Disclaimer:** This is a demo model trained on a small"
+            " synthetic dataset."
+        )
+        st.markdown(
+            "Not medical advice. See a healthcare professional for diagnosis."
+        )

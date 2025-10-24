@@ -18,13 +18,11 @@ def test_train_creates_artifacts(tmp_path):
     )
     df.to_csv(csv_path, index=False)
 
-    pipeline_file = tmp_path / "pipeline.pkl"
     bundle_file = tmp_path / "model_bundle.pkl"
 
     # Run train with stratify enabled (dataset has >=2 per class)
     train_model.train(
         csv_path=str(csv_path),
-        pipeline_file=str(pipeline_file),
         bundle_file=str(bundle_file),
         test_size=0.5,
         random_state=0,
@@ -33,7 +31,7 @@ def test_train_creates_artifacts(tmp_path):
 
     # bundle artifact should be created
     assert bundle_file.exists(), "bundle file was not created"
-    # Load and sanity check bundle
+    # Load and sanity check bundle (pipeline object should expose predict)
     with open(str(bundle_file), "rb") as f:
         bundle = pickle.load(f)
     assert hasattr(bundle, "predict")

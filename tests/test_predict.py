@@ -17,12 +17,10 @@ def test_predict_after_train(tmp_path):
     )
     df.to_csv(csv_path, index=False)
 
-    pipeline_file = tmp_path / "pipeline.pkl"
     bundle_file = tmp_path / "model_bundle.pkl"
 
     train_model.train(
         csv_path=str(csv_path),
-        pipeline_file=str(pipeline_file),
         bundle_file=str(bundle_file),
         test_size=0.5,
         random_state=0,

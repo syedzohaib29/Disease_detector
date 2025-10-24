@@ -160,18 +160,9 @@ def train(
     )
     logger.info("Classification Report:\n%s", report)
 
-    # Save pipeline artifact (the pipeline contains the feature-order
-    # transformer and the label-encoding classifier so a single artifact is
-    # sufficient for inference).
-    try:
-        with open(pipeline_file, "wb") as f:
-            pickle.dump(pipeline, f)
-        logger.info("Saved pipeline -> %s", pipeline_file)
-    except Exception:
-        logger.warning("Failed to save pipeline artifact %s", pipeline_file)
-
-    # For backward compatibility we also write the bundle file. In the new
-    # workflow the bundle is simply the pipeline object (it exposes `predict`).
+    # Save a single canonical artifact (the pipeline): it contains the
+    # feature-order transformer and the label-encoding classifier so a single
+    # file is sufficient for inference.
     try:
         with open(bundle_file, "wb") as f:
             pickle.dump(pipeline, f)
@@ -184,20 +175,38 @@ def train(
 
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Train symptom->disease model")
-    p.add_argument("--csv", default=CSV_FILE_DEFAULT, help="Path to symptoms CSV")
     p.add_argument(
-        "--model", default=MODEL_FILE_DEFAULT, help="Output model file (pickle)"
+        "--csv",
+        default=CSV_FILE_DEFAULT,
+        help="Path to symptoms CSV",
     )
     p.add_argument(
-        "--vocab", default=VOCAB_FILE_DEFAULT, help="Output vocab file (pickle)"
+        "--model",
+        default=MODEL_FILE_DEFAULT,
+        help="Output model file (pickle)",
+    )
+    p.add_argument(
+        "--vocab",
+        default=VOCAB_FILE_DEFAULT,
+        help="Output vocab file (pickle)",
     )
     p.add_argument(
         "--label-enc",
         default=LABEL_ENCODER_FILE_DEFAULT,
         help="Output label encoder file (pickle)",
     )
-    p.add_argument("--test-size", type=float, default=0.2, help="Test set fraction")
-    p.add_argument("--random-state", type=int, default=42, help="Random seed")
+    p.add_argument(
+        "--test-size",
+        type=float,
+        default=0.2,
+        help="Test set fraction",
+    )
+    p.add_argument(
+        "--random-state",
+        type=int,
+        default=42,
+        help="Random seed",
+    )
     p.add_argument(
         "--no-stratify",
         dest="stratify_auto",
@@ -218,7 +227,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[list] = None) -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s: %(message)s"
+    )
     parser = _build_parser()
     args = parser.parse_args(argv)
     train(
